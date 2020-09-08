@@ -1,21 +1,17 @@
 ---
-     # Параметры для сервера
 - hosts: server
   become: true
-     # Установка nfs-utils
   tasks:
-  - name: install nfs-utils
+  - name: Install nfs-utils
     yum:
       name: nfs-utils
-     # обозначаем директории для расшаривания
-  - name: create directories
+  - name: Create directories
     file:
       path: "{{ item.path }}"
       state: directory
       mode: "{{ item.mode }}"
     loop: "{{ nfs_mounts }}"
-
-  - name: configure exports filesystems
+  - name: Configure exports filesystems
     blockinfile:
       path: /etc/exports
       marker: "# {mark} ANSIBLE MANAGED BLOCK NFS"
@@ -24,19 +20,16 @@
         {{ item.path }} {{ item.clients | join(' ') }}
         {% endfor %}
     notify: restart nfs
-     # разрешаем firewall
   - name: Enable firewalld
     become: true
     systemd:
       name: firewalld
-     # Разрешаем nfs в firewall
   - name: Create rule for firewalld
     become: true
     firewalld:
       service: nfs
       permanent: true
       state: enabled
-     # Перезагрузка nfs сервера
   handlers:
   - name: restart nfs
     systemd:
@@ -44,17 +37,15 @@
       enabled: true
       daemon_reload: true
       state: restarted
-     # Параметры для клиента
+
 - hosts: client
   become: true
   tasks:
-     # Создаем директории и монтируем
   - name: Create directories
     file:
       path: "{{ item.mount_point }}"
       state: directory
     loop: "{{ nfs_mounts }}"
-
   - name: Config mount point
     mount:
       src: "{{ item.server }}:{{ item.path }}"

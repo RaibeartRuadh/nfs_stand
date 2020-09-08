@@ -1,9 +1,9 @@
 MACHINES = {
-  :RaibeartRuadhServer => {
-    "ip" => "192.168.0.10",  
+  :server => {
+    "ip" => "10.0.0.10",
   },
-  :RaibeartRuadhRClient => {
-    "ip" => "192.168.0.11",  
+  :client => {
+    "ip" => "10.0.0.11",
   }
 }
 Vagrant.configure("2") do |config|
@@ -12,9 +12,9 @@ Vagrant.configure("2") do |config|
     config.vm.define machine_name do |machine|
       machine.vm.hostname = machine_name
       machine.vm.network "private_network", ip: machine_config["ip"]
-end
-end
+    end
+  end
   config.vm.provision "ansible" do |ansible|
     ansible.playbook = "ans_supp/general.yml"
-end
+  end
 end
