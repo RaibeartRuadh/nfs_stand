@@ -5,6 +5,14 @@
   - name: Install nfs-utils
     yum:
       name: nfs-utils
+  - name: Install firewalld
+    yum:
+      name: firewalld
+
+  - name: Install nano
+    yum:
+      name: nano
+
   - name: Create directories
     file:
       path: "{{ item.path }}"
@@ -20,20 +28,70 @@
         {{ item.path }} {{ item.clients | join(' ') }}
         {% endfor %}
     notify: restart nfs
-  - name: Enable firewalld
-    become: true
-    systemd:
-      name: firewalld
+# правило для firewall разрешить nfs
   - name: Create rule for firewalld
-    become: true
     firewalld:
       service: nfs
       permanent: true
       state: enabled
+# правило для firewall разрешить вход клиента
+  - name: Create rule for firewalld
+    firewalld:
+      source: 10.0.0.11/24
+      permanent: true
+      state: enabled
+
+  - name: Enable firewalld
+    service: name=firewalld state=started enabled=yes
+
+  - name: Enable rpcbind
+    service: name=rpcbind state=started enabled=yes
+
+  - name: Set work as default policy
+    command: firewall-cmd --set-default-zone=trusted
+
+  - name: Allow http/https
+    command: firewall-cmd --zone=dmz --permanent --add-service=http --add-service=https
+
+  - name: Allow nfs
+    command: firewall-cmd --permanent --add-service=nfs
+
+  - name: Allow mountd
+    command: firewall-cmd --permanent --zone=public --add-service=mountd
+
+  - name: Allow rpc-bind
+    command: firewall-cmd --permanent --zone=public --add-service=rpc-bind
+
+  - name: Allow port
+    command: firewall-cmd --permanent --add-port=2049/tcp
+
+  - name: Allow port
+    command: firewall-cmd --permanent --add-port=2200/tcp
+
+  - name: Rich-rule
+    command: firewall-cmd --permanent --add-rich-rule 'rule family="ipv4" source address="10.0.0.0/24" service name="nfs" accept'
+
+  - name: Rich-rule
+    command: firewall-cmd --permanent --add-rich-rule 'rule family="ipv4" source address="10.0.0.0/24" service name="ssh" accept'
+
+  - name: Reload
+    command: firewall-cmd --reload
+
+  - name: list-all
+    command: firewall-cmd --list-all
+
+
   handlers:
   - name: restart nfs
     systemd:
       name: nfs-server.service
+      enabled: true
+      daemon_reload: true
+      state: restarted
+
+  - name: restart firewalld 
+    systemd:
+      name: firewalld.service
       enabled: true
       daemon_reload: true
       state: restarted
